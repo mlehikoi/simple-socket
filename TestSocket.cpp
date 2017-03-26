@@ -52,25 +52,25 @@ void receive()
 void receiveTcp()
 {
     auto s = SocketFactory::createTcpSocket();
-    auto r = s.listen("127.0.0.1", 7001);
+    auto l = s.listen("127.0.0.1", 7001);
     
     // Accept two connections
-    auto c1 = r.accept();
-    auto c2 = r.accept();
+    auto c1 = l.accept();
+    auto c2 = l.accept();
     
     for (;;)
     {
         auto ret1 = c1.receive();
         if (ret1.first > 0)
         {
-            //cout << "1 " << ret1.first << " " << ret1.second << endl;
+            cout << "1 " << ret1.first << " " << ret1.second << endl;
             c1.send("ack");
         }
         
         auto ret2 = c2.receive();
         if (ret2.first > 0)
         {
-            //cout << "2 " << ret2.first << " " << ret2.second << endl;
+            cout << "2 " << ret2.first << " " << ret2.second << endl;
             c2.send("ack");
         }
 
