@@ -2,9 +2,11 @@
 #include <cstdint>
 #include <iostream>
 #include <string>
+#include <sstream>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -195,10 +197,24 @@ inline std::pair<int, std::string> TcpConnection::receive()
 {
     auto s = getSocket();
 
-    static const int BUFLEN = 1024;
+    std::stringstream ss;
+    static const int BUFLEN = 2;
     char buf[BUFLEN] = {};
-    const auto rv = recv(s, buf, BUFLEN, 0);
-    return std::make_pair(rv, std::string(buf, rv));
+    auto bytes = recv(s, buf, BUFLEN, 0);
+    if (bytes > 0)
+    {
+        ss.write(buf, bytes);
+        int count = 0;
+        ::ioctl(s, FIONREAD, &count);
+        for (int i = 0; i < count; i += BUFLEN)
+        {
+            const int left = count - i;
+            const int n = left > BUFLEN ? BUFLEN : left; 
+            bytes = recv(s, buf, n, 0);
+            ss.write(buf, bytes);
+        }
+    }
+    return std::make_pair(bytes, ss.str());
 }
 
 inline int TcpConnection::getSocket() const
