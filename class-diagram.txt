@@ -1,0 +1,53 @@
+@startuml
+
+skinparam classAttributeIconSize 0
+
+
+class SocketFactory
+class UdpSocket
+class TcpSocket
+class SocketAbs
+class UdpReceiver
+
+SocketFactory ..> UdpSocket
+SocketFactory ..> TcpSocket
+
+SocketAbs <|-- TcpSocket
+SocketAbs <|-- UdpSocket
+
+UdpSocket ..> UdpReceiver
+UdpReceiver --> UdpSocket
+
+TcpSocket ..> TcpConnection
+TcpConnection --> TcpSocket
+
+TcpSocket ..> TcpListener
+TcpListener --> TcpSocket
+
+TcpListener ..> TcpConnection
+
+class SocketFactory {
+    {static}+createUdpSocket()
+    {static}+createTcpSocket()
+}
+
+SocketAbs : -int socketM
+SocketAbs : +int getSocket()
+
+UdpSocket : +UdpReceiver bind()
+UdpSocket : +int sendTo()
+
+UdpReceiver : +receive()
+
+TcpSocket : +TcpListener listen()
+TcpSocket : +TcpConnection connect()
+
+TcpListener : +TcpConnection accept()
+
+class TcpConnection {
+    -int socketM
+    +send()
+    +receive()
+}
+
+@enduml

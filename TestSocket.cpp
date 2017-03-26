@@ -53,11 +53,10 @@ void receiveTcp()
 {
     auto s = SocketFactory::createTcpSocket();
     auto r = s.listen("127.0.0.1", 7001);
-    cout << "r: " << r << endl;
     
     // Accept two connections
-    auto c1 = s.accept();
-    auto c2 = s.accept();
+    auto c1 = r.accept();
+    auto c2 = r.accept();
     
     for (;;)
     {
