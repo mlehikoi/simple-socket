@@ -112,6 +112,10 @@ public:
     }
 };
 
+class TcpSocket
+{
+};
+
 class SocketFactory
 {
 public:
