@@ -29,30 +29,95 @@ void send()
 {
     std::string d;
     d.append(9216, '*');
-    auto s = SocketFactory::createUdpSendSocket();
+    auto s = SocketFactory::createUdpSocket();
     for (int i = 0; i < 2; ++i)
     {
-        s.sendTo("127.0.0.1", 7000, d);//std::string("Hello world ") + std::to_string(i));
+        cout << "send ret: " << s.sendTo("127.0.0.1", 7000, d) << endl;//std::string("Hello world ") + std::to_string(i));
     }
     s.sendTo("127.0.0.1", 7000, "");
 }
 
 void receive()
 {
-    auto s = SocketFactory::createUdpReceiveSocket("127.0.0.1", 7000);
+    auto s = SocketFactory::createUdpSocket();
+    auto r = s.bind("0.0.0.0", 7000);
     for (;;)
     {
-        auto ret = s.receive();
+        auto ret = r.receive();
         if (ret.first == -1 || ret.second.empty()) break;
         cout << ret.second.size() << endl;
     }
 }
 
+void receiveTcp()
+{
+    auto s = SocketFactory::createTcpSocket();
+    auto r = s.listen("127.0.0.1", 7001);
+    cout << "r: " << r << endl;
+    
+    // Accept two connections
+    auto c1 = s.accept();
+    auto c2 = s.accept();
+    
+    for (;;)
+    {
+        auto ret1 = c1.receive();
+        if (ret1.first > 0)
+        {
+            //cout << "1 " << ret1.first << " " << ret1.second << endl;
+            c1.send("ack");
+        }
+        
+        auto ret2 = c2.receive();
+        if (ret2.first > 0)
+        {
+            //cout << "2 " << ret2.first << " " << ret2.second << endl;
+            c2.send("ack");
+        }
+
+        if (ret1.first <= 0 && ret2.first <= 0) break;
+    }
+    cout << "Done" << endl;
+}
+
+void sendTcp(int indexP)
+{
+    cout << "sendTcp" << endl;
+    auto s = SocketFactory::createTcpSocket();
+    auto conn = s.connect("127.0.0.1", 7001);
+    //cout << "Conn " << ret << endl;
+    
+    for (int i = 0; i < 10; ++i)
+    {
+        std::string str = "Message " + std::to_string(i) + " from " + std::to_string(indexP);
+        conn.send(str);
+        
+        auto resp = conn.receive();
+        //cout << "Response to " << indexP << " " << resp.second << endl;
+    }
+    cout << "Closing..." << endl;
+}
+
 int main()
 {
-    std::thread sender([]{
-        send();
-    });
-    receive();
-    sender.join();
+    //std::thread sender([]{
+    //    send();
+    //});
+    //receive();
+    //sender.join();
+    
+    
+    std::thread receiver([] { receiveTcp(); });
+    std::this_thread::sleep_for(100ms);
+    
+    std::thread sender1([]{ sendTcp(1); });
+    //
+    std::thread sender2([]{ sendTcp(2); });
+    
+    
+    
+    
+    sender1.join();
+    sender2.join();
+    receiver.join();
 }
