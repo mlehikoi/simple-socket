@@ -26,22 +26,20 @@ inline IpAddress IpAddress::fromString(const char* pStrP)
 
 // class SocketAbs
 inline SocketAbs::SocketAbs(int socketP)
-  : ownsM{true},
-    socketM{socketP}
-{        
+  : socketM{socketP}
+{
+    std::cout << "SocketAbs: "<< "'" << (int)socketM << "'" << std::endl;
 }
 
 inline SocketAbs::SocketAbs(SocketAbs&& rOtherP)
-  : ownsM{rOtherP.ownsM},
-    socketM{rOtherP.socketM}
+  : socketM{rOtherP.socketM}
 {
-    rOtherP.ownsM = false;
     rOtherP.socketM = -1;
 }
 
 inline SocketAbs::~SocketAbs()
 {
-    std::cout << "~SocketAbs " << socketM << std::endl;
+    std::cout << "~SocketAbs: " << "'" << (int)socketM << "'" << std::endl;
     if (socketM >= 0)
     {
         ::close(socketM);
@@ -55,11 +53,12 @@ inline int SocketAbs::getSocket() const
 
 // class UdpSocket
 inline UdpSocket::UdpSocket()
-  : SocketAbs{::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)}
+  : SocketAbs{::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)},
+    receiverM{}
 {
 }
 
-inline UdpReceiver UdpSocket::bind(const IpAddress& rIpAddressP, uint16_t portP)
+inline UdpReceiver& UdpSocket::bind(const IpAddress& rIpAddressP, uint16_t portP)
 {
     sockaddr_in si_me = {};
     si_me.sin_family = AF_INET;
@@ -67,7 +66,13 @@ inline UdpReceiver UdpSocket::bind(const IpAddress& rIpAddressP, uint16_t portP)
     si_me.sin_addr.s_addr = rIpAddressP.ipM;
     assert(::bind(getSocket(), reinterpret_cast<const sockaddr*>(&si_me), sizeof(si_me)) != -1);
     
-    return UdpReceiver{*this};
+    receiverM.reset(new UdpReceiver{*this});
+    return *receiverM;
+}
+
+inline UdpReceiver& UdpSocket::getReceiver()
+{
+    return *receiverM;
 }
 
 inline int UdpSocket::sendTo(const IpAddress& rIpAddressP, uint16_t portP, const char* msgP, size_t lenP)
@@ -99,12 +104,20 @@ inline std::pair<int, std::string> UdpReceiver::receive()
     
     static const int BUFLEN = 64 * 1024;
     char buf[BUFLEN] = {};
-    {
-        const auto rv = recv(s, buf, 2, MSG_PEEK);
-        std::cout << "Peak: " << rv << std::endl;
-    }
+    // {
+    //     const auto rv = recv(s, buf, 2, MSG_PEEK);
+    //     std::cout << "Peak: " << rv << std::endl;
+    //     int count = 0;
+    //     ::ioctl(s, FIONREAD, &count);
+    //     std::cout << "ioctl:" << count << std::endl;
+    // }
     const auto rv = recv(s, buf, BUFLEN, 0);
     return std::make_pair(rv, std::string(buf, rv));
+}
+
+int UdpReceiver::getSocket() const
+{
+    return rSocketM.getSocket();
 }
 
 // class TcpSocket

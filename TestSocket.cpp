@@ -28,9 +28,9 @@ void die(const char * format, ...)
 void send()
 {
     std::string d;
-    d.append(9216, '*');
+    d.append(20/*9216*/, '*');
     auto s = SocketFactory::createUdpSocket();
-    for (int i = 0; i < 2; ++i)
+    for (int i = 0; i < 20; ++i)
     {
         cout << "send ret: " << s.sendTo("127.0.0.1", 7000, d) << endl;//std::string("Hello world ") + std::to_string(i));
     }
@@ -97,14 +97,72 @@ void sendTcp(int indexP)
     cout << "Closing..." << endl;
 }
 
+void testCreate()
+{
+    UdpSocket s;
+}
+
+void sendUdp(int indexP, int portP, int timeoutP)
+{
+    UdpSocket s;
+    for (int i = 0; i < 5; ++i)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(timeoutP));
+        s.sendTo("127.0.0.1", portP, "msg " + std::to_string(indexP));
+    }
+    s.sendTo("127.0.0.1", portP, "");
+}
+
+void testPoll()
+{
+    std::thread t1([]{ sendUdp(1, 7002, 100); });
+    std::thread t2([]{ sendUdp(2, 7003, 300); });
+    
+    UdpSocket s1;
+    auto rec1 = s1.bind("0.0.0.0", 7002);
+    UdpSocket s2;
+    auto rec2 = s2.bind("0.0.0.0", 7003);
+    //start = true;
+    
+    std::vector<UdpReceiver*> sockets{ &rec1, &rec2 };
+    std::this_thread::sleep_for(333ms);
+    while (!sockets.empty())
+    {
+        auto pollResults = sspoll(sockets.begin(), sockets.end(), 5000);
+        cout << "pollResults: " << pollResults.size() << endl;
+        if (pollResults.empty()) continue;
+        for (auto pr : pollResults)
+        {
+            auto ret = pr->receive();
+            if (ret.first <= 0)
+            {
+                sockets.erase(std::remove(sockets.begin(), sockets.end(), pr), sockets.end());
+            }
+            else
+            {
+                cout << ret.second << endl;
+            }
+        }
+        //std::this_thread::sleep_for(100ms);
+        //auto ret = rec.receive();
+        //if (ret.first <= 0) break;
+        //cout << ret.second << endl;
+    }
+    
+    t1.join();
+    t2.join();
+}
+
 int main()
 {
-    //std::thread sender([]{
-    //    send();
-    //});
-    //receive();
-    //sender.join();
+    //testCreate();
+    testPoll();
+    return 0;
+    std::thread sender([]{ send();});
+    receive();
+    sender.join();
     
+    cout << "Starting TCP test" << endl;
     
     std::thread receiver([] { receiveTcp(); });
     std::this_thread::sleep_for(100ms);
